@@ -11,7 +11,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterForegroundTask.initCommunicationPort();
   WorkoutForegroundService.init();
-  await NotificationService.instance.init();
+  // Notification setup is best-effort: a failure here (e.g. a missing icon
+  // resource) must never block the app from launching.
+  try {
+    await NotificationService.instance.init();
+  } catch (e, st) {
+    debugPrint('Notification init failed: $e\n$st');
+  }
   runApp(const ProviderScope(child: TreadmillApp()));
 }
 

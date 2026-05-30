@@ -14,17 +14,15 @@ import 'workout/activity_tracker.dart';
 import 'workout/workout_engine.dart';
 
 /// The single shared BLE/FTMS connection.
+/// `ChangeNotifierProvider` disposes the notifier automatically, so no explicit
+/// `ref.onDispose` is needed (that would dispose it twice).
 final ftmsServiceProvider = ChangeNotifierProvider<FtmsService>((ref) {
-  final service = FtmsService();
-  ref.onDispose(service.dispose);
-  return service;
+  return FtmsService();
 });
 
 /// Drives BLE scanning and device classification.
 final scanControllerProvider = ChangeNotifierProvider<ScanController>((ref) {
-  final controller = ScanController();
-  ref.onDispose(controller.dispose);
-  return controller;
+  return ScanController();
 });
 
 /// Workout plan persistence.
@@ -85,17 +83,19 @@ Future<void> rescheduleReminders(WidgetRef ref) async {
 }
 
 /// Shared activity tracker used to record both manual and plan runs.
+/// Uses `ref.read` for the BLE service: it only needs the long-lived instance
+/// and must not be rebuilt every time the treadmill pushes a data packet.
 final activityTrackerProvider = Provider<ActivityTracker>((ref) {
-  final ftms = ref.watch(ftmsServiceProvider);
-  final repo = ref.watch(activityRepositoryProvider);
+  final ftms = ref.read(ftmsServiceProvider);
+  final repo = ref.read(activityRepositoryProvider);
   return ActivityTracker(ftms, repo);
 });
 
-/// The workout execution state machine, wired to the BLE service.
+/// The workout execution state machine, wired to the BLE service. Reads (not
+/// watches) its dependencies so it survives for the whole session;
+/// `ChangeNotifierProvider` disposes the engine automatically.
 final workoutEngineProvider = ChangeNotifierProvider<WorkoutEngine>((ref) {
-  final ftms = ref.watch(ftmsServiceProvider);
-  final tracker = ref.watch(activityTrackerProvider);
-  final engine = WorkoutEngine(ftms, tracker);
-  ref.onDispose(engine.dispose);
-  return engine;
+  final ftms = ref.read(ftmsServiceProvider);
+  final tracker = ref.read(activityTrackerProvider);
+  return WorkoutEngine(ftms, tracker);
 });

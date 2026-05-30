@@ -35,8 +35,7 @@ class NotificationService {
       // Fall back to the default (UTC) if the platform timezone is unknown.
     }
 
-    const androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/app_icon');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
