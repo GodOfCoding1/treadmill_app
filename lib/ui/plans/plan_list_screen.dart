@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app_providers.dart';
-import '../../ble/ftms_service.dart';
 import '../../core/format.dart';
 import '../../domain/workout_plan.dart';
+import '../connect_gate.dart';
 import '../router.dart';
 
 class PlanListScreen extends ConsumerWidget {
@@ -52,15 +52,7 @@ class _PlanCard extends ConsumerWidget {
   final WorkoutPlan plan;
 
   Future<void> _start(BuildContext context, WidgetRef ref) async {
-    final ftms = ref.read(ftmsServiceProvider);
-    if (ftms.status != FtmsConnectionStatus.ready) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Connect to a treadmill before starting a workout.')),
-      );
-      return;
-    }
-    context.push(AppRoutes.activeWorkout, extra: plan);
+    await ensureConnectedThen(context, ref, StartPlanIntent(plan));
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_providers.dart';
 import '../../ble/scan_controller.dart';
+import '../connect_gate.dart';
 import '../router.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,11 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     setState(() => _connecting = false);
 
     if (ok) {
-      context.go(AppRoutes.dashboard);
+      // Resume whatever the user was trying to do before connecting; fall back
+      // to the manual control screen if there was no pending intent.
+      if (!resolvePendingIntent(context, ref)) {
+        context.go(AppRoutes.control);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(ftms.errorMessage ?? 'Could not connect.')),
@@ -51,18 +56,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find your treadmill'),
-        actions: [
-          IconButton(
-            tooltip: 'Activity calendar',
-            icon: const Icon(Icons.calendar_month),
-            onPressed: () => context.push(AppRoutes.activity),
-          ),
-          IconButton(
-            tooltip: 'Workout plans',
-            icon: const Icon(Icons.list_alt),
-            onPressed: () => context.push(AppRoutes.plans),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: scan.isScanning ? scan.stopScan : scan.startScan,

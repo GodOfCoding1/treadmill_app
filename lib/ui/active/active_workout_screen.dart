@@ -68,7 +68,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
       await engine.stop();
       ref.invalidate(activitiesProvider);
       await rescheduleReminders(ref);
-      if (mounted) context.pop();
+      if (mounted) {
+        context.canPop() ? context.pop() : context.go(AppRoutes.home);
+      }
     }
   }
 
@@ -86,7 +88,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
           engine.reset();
           ref.invalidate(activitiesProvider);
           rescheduleReminders(ref);
-          context.go(AppRoutes.dashboard);
+          context.go(AppRoutes.home);
         },
       );
     }

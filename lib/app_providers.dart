@@ -99,3 +99,25 @@ final workoutEngineProvider = ChangeNotifierProvider<WorkoutEngine>((ref) {
   final tracker = ref.read(activityTrackerProvider);
   return WorkoutEngine(ftms, tracker);
 });
+
+/// An action the user wanted to perform but that requires a treadmill
+/// connection first. Set before routing to the scan screen so it can be
+/// resumed automatically once a treadmill is connected.
+sealed class PendingIntent {
+  const PendingIntent();
+}
+
+/// Start the given workout plan once connected.
+class StartPlanIntent extends PendingIntent {
+  const StartPlanIntent(this.plan);
+  final WorkoutPlan plan;
+}
+
+/// Open the manual treadmill control screen once connected.
+class OpenControlIntent extends PendingIntent {
+  const OpenControlIntent();
+}
+
+/// Holds a deferred [PendingIntent] across the connect flow. Cleared once
+/// resolved by the scan screen after a successful connection.
+final pendingIntentProvider = StateProvider<PendingIntent?>((ref) => null);

@@ -40,6 +40,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(ftms.deviceName),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.home),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -57,8 +63,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const _StreakBanner(),
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -191,18 +195,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
-            onPressed: () => context.push(AppRoutes.plans),
-            icon: const Icon(Icons.list_alt),
-            label: const Text('My workout plans'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => context.push(AppRoutes.activity),
-            icon: const Icon(Icons.calendar_month),
-            label: const Text('Activity calendar'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
             onPressed: () => context.push(AppRoutes.reminders),
             icon: const Icon(Icons.notifications_outlined),
             label: const Text('Reminders'),
@@ -211,7 +203,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           TextButton.icon(
             onPressed: () async {
               await ftms.disconnect();
-              if (context.mounted) context.go(AppRoutes.scan);
+              if (context.mounted) context.go(AppRoutes.home);
             },
             icon: const Icon(Icons.bluetooth_disabled),
             label: const Text('Disconnect'),
@@ -222,13 +214,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-class _Disconnected extends StatelessWidget {
+class _Disconnected extends ConsumerWidget {
   const _Disconnected({this.message});
   final String? message;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Treadmill')),
+      appBar: AppBar(
+        title: const Text('Treadmill'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(AppRoutes.home),
+        ),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -241,77 +241,15 @@ class _Disconnected extends StatelessWidget {
                   textAlign: TextAlign.center),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => context.go(AppRoutes.scan),
+                onPressed: () {
+                  ref.read(pendingIntentProvider.notifier).state =
+                      const OpenControlIntent();
+                  context.push(AppRoutes.scan);
+                },
                 child: const Text('Scan for treadmills'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StreakBanner extends ConsumerWidget {
-  const _StreakBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final stats = ref.watch(streakStatsProvider);
-    final value = stats.asData?.value;
-    if (value == null) return const SizedBox.shrink();
-
-    final hasStreak = value.current > 0;
-    final color =
-        hasStreak ? theme.colorScheme.primary : theme.disabledColor;
-
-    String subtitle;
-    if (!hasStreak) {
-      subtitle = 'Run 20+ minutes today to start a streak.';
-    } else if (value.atRisk) {
-      subtitle = 'Run today to keep it going!';
-    } else {
-      subtitle = 'Nice — you worked out today.';
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.local_fire_department, color: color, size: 36),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hasStreak
-                        ? '${value.current} day streak'
-                        : 'No active streak',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.hintColor)),
-                ],
-              ),
-            ),
-            if (value.longest > 0)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Best',
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: theme.hintColor)),
-                  Text('${value.longest}',
-                      style: theme.textTheme.titleMedium),
-                ],
-              ),
-          ],
         ),
       ),
     );
