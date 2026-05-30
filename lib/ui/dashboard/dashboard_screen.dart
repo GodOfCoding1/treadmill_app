@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_providers.dart';
 import '../../domain/activity_entry.dart';
+import '../../workout/foreground_service.dart';
 import '../router.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -56,6 +57,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          const _StreakBanner(),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -142,6 +145,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     final tracker = ref.read(activityTrackerProvider);
                     if (!tracker.isTracking) {
                       tracker.begin(type: ActivityType.manual);
+                      await WorkoutForegroundService.requestPermissions();
+                      await WorkoutForegroundService.start(
+                        title: 'Manual run',
+                        text: 'Treadmill running',
+                      );
                     }
                   },
                   icon: const Icon(Icons.play_arrow),
@@ -165,10 +173,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             onPressed: () async {
               await ftms.stop();
+              await WorkoutForegroundService.stop();
               final tracker = ref.read(activityTrackerProvider);
               final entry = await tracker.complete();
               if (entry != null) {
                 ref.invalidate(activitiesProvider);
+                await rescheduleReminders(ref);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Activity logged.')),
@@ -190,6 +200,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             onPressed: () => context.push(AppRoutes.activity),
             icon: const Icon(Icons.calendar_month),
             label: const Text('Activity calendar'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.reminders),
+            icon: const Icon(Icons.notifications_outlined),
+            label: const Text('Reminders'),
           ),
           const SizedBox(height: 8),
           TextButton.icon(
@@ -230,6 +246,72 @@ class _Disconnected extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StreakBanner extends ConsumerWidget {
+  const _StreakBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final stats = ref.watch(streakStatsProvider);
+    final value = stats.asData?.value;
+    if (value == null) return const SizedBox.shrink();
+
+    final hasStreak = value.current > 0;
+    final color =
+        hasStreak ? theme.colorScheme.primary : theme.disabledColor;
+
+    String subtitle;
+    if (!hasStreak) {
+      subtitle = 'Run 20+ minutes today to start a streak.';
+    } else if (value.atRisk) {
+      subtitle = 'Run today to keep it going!';
+    } else {
+      subtitle = 'Nice — you worked out today.';
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.local_fire_department, color: color, size: 36),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasStreak
+                        ? '${value.current} day streak'
+                        : 'No active streak',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.hintColor)),
+                ],
+              ),
+            ),
+            if (value.longest > 0)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Best',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.hintColor)),
+                  Text('${value.longest}',
+                      style: theme.textTheme.titleMedium),
+                ],
+              ),
+          ],
         ),
       ),
     );

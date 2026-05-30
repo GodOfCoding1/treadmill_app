@@ -7,6 +7,7 @@ import 'builder/plan_builder_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'plans/plan_list_screen.dart';
 import 'scan/scan_screen.dart';
+import 'settings/reminders_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -16,6 +17,7 @@ class AppRoutes {
   static const planBuilder = '/plans/edit';
   static const activeWorkout = '/active';
   static const activity = '/activity';
+  static const reminders = '/reminders';
 }
 
 final appRouter = GoRouter(
@@ -46,6 +48,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.activity,
       builder: (context, state) => const ActivityCalendarScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.reminders,
+      builder: (context, state) => const RemindersScreen(),
     ),
   ],
 );

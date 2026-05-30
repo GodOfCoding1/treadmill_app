@@ -222,15 +222,16 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-class _MonthSummary extends StatelessWidget {
+class _MonthSummary extends ConsumerWidget {
   const _MonthSummary({required this.month, required this.byDay});
 
   final DateTime month;
   final Map<DateTime, List<ActivityEntry>> byDay;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final streak = ref.watch(streakStatsProvider).asData?.value;
     final monthEntries = byDay.entries
         .where((e) => e.key.year == month.year && e.key.month == month.month)
         .toList();
@@ -256,6 +257,12 @@ class _MonthSummary extends StatelessWidget {
           children: [
             Text('This month', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
+            if (streak != null) ...[
+              _SummaryRow(
+                  label: 'Current streak', value: '${streak.current} days'),
+              _SummaryRow(
+                  label: 'Longest streak', value: '${streak.longest} days'),
+            ],
             _SummaryRow(
                 label: 'Active days', value: '$activeDays'),
             _SummaryRow(

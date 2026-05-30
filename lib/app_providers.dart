@@ -4,8 +4,12 @@ import 'ble/ftms_service.dart';
 import 'ble/scan_controller.dart';
 import 'data/activity_repository.dart';
 import 'data/plan_repository.dart';
+import 'data/reminder_repository.dart';
 import 'domain/activity_entry.dart';
+import 'domain/reminder_settings.dart';
+import 'domain/streak.dart';
 import 'domain/workout_plan.dart';
+import 'notifications/notification_service.dart';
 import 'workout/activity_tracker.dart';
 import 'workout/workout_engine.dart';
 
@@ -47,6 +51,38 @@ final activitiesProvider =
   final repo = ref.watch(activityRepositoryProvider);
   return repo.loadAll();
 });
+
+/// Streak metrics derived from recorded activities.
+final streakStatsProvider = Provider.autoDispose<AsyncValue<StreakStats>>((ref) {
+  return ref.watch(activitiesProvider).whenData(StreakStats.fromActivities);
+});
+
+/// Local notification scheduling.
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService.instance;
+});
+
+/// Reminder preferences persistence.
+final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
+  return ReminderRepository();
+});
+
+/// Current reminder settings. Invalidate after saving.
+final reminderSettingsProvider =
+    FutureProvider.autoDispose<ReminderSettings>((ref) async {
+  final repo = ref.watch(reminderRepositoryProvider);
+  return repo.load();
+});
+
+/// Re-evaluates the streak nudge against freshly loaded activities so it does
+/// not fire on a day the user has already completed. Safe to call after a run
+/// is logged.
+Future<void> rescheduleReminders(WidgetRef ref) async {
+  final settings = await ref.read(reminderRepositoryProvider).load();
+  final activities = await ref.read(activityRepositoryProvider).loadAll();
+  final stats = StreakStats.fromActivities(activities);
+  await ref.read(notificationServiceProvider).apply(settings, stats);
+}
 
 /// Shared activity tracker used to record both manual and plan runs.
 final activityTrackerProvider = Provider<ActivityTracker>((ref) {

@@ -18,13 +18,31 @@ class ActiveWorkoutScreen extends ConsumerStatefulWidget {
       _ActiveWorkoutScreenState();
 }
 
-class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
+class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(workoutEngineProvider).start(widget.plan);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Returning to the foreground: the 1-second ticker may have been throttled
+    // while backgrounded, so force an immediate wall-clock resync to correct
+    // the countdown and re-apply the interval that should be active now.
+    if (state == AppLifecycleState.resumed) {
+      ref.read(workoutEngineProvider).syncFromWallClock();
+    }
   }
 
   Future<void> _confirmStop() async {
@@ -48,6 +66,8 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     );
     if (shouldStop == true) {
       await engine.stop();
+      ref.invalidate(activitiesProvider);
+      await rescheduleReminders(ref);
       if (mounted) context.pop();
     }
   }
@@ -64,6 +84,8 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         elapsedSec: engine.elapsedTotalSec,
         onDone: () {
           engine.reset();
+          ref.invalidate(activitiesProvider);
+          rescheduleReminders(ref);
           context.go(AppRoutes.dashboard);
         },
       );

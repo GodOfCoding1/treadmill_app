@@ -12,6 +12,7 @@ enum FtmsConnectionStatus {
   connecting,
   discovering,
   requestingControl,
+  reconnecting,
   ready,
   error,
 }
@@ -49,6 +50,13 @@ class FtmsService extends ChangeNotifier {
   bool get hasControl => _hasControl;
 
   bool _everConnected = false;
+  bool _reconnecting = false;
+  bool _disposed = false;
+
+  /// Invoked after the link is automatically re-established following an
+  /// unexpected drop. The workout engine uses this to re-request control and
+  /// re-apply the interval that should be active. May be async.
+  Future<void> Function()? onReconnected;
 
   BleCharacteristic? _controlPoint;
   BleCharacteristic? _treadmillData;
@@ -228,13 +236,51 @@ class FtmsService extends ChangeNotifier {
       _everConnected = true;
       return;
     }
+    // A deliberate disconnect() cancels this subscription before tearing the
+    // link down, so reaching here means an unexpected drop (out of range,
+    // power loss, interference while backgrounded). Attempt to recover.
     if (_everConnected &&
+        !_reconnecting &&
         _status != FtmsConnectionStatus.disconnected &&
         _status != FtmsConnectionStatus.error) {
       _hasControl = false;
       _everConnected = false;
-      _setStatus(FtmsConnectionStatus.disconnected,
-          error: 'Treadmill disconnected.');
+      _attemptReconnect();
+    }
+  }
+
+  /// Automatically re-establishes the connection with backoff after an
+  /// unexpected drop, then notifies [onReconnected] so the active workout can
+  /// resume control.
+  Future<void> _attemptReconnect() async {
+    final device = _device;
+    if (device == null || _reconnecting) return;
+    _reconnecting = true;
+    const maxAttempts = 5;
+    try {
+      for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+        if (_disposed) return;
+        _setStatus(FtmsConnectionStatus.reconnecting,
+            error: 'Reconnecting to treadmill (attempt $attempt)…');
+        final ok = await connectAndSetup(device);
+        if (_disposed) return;
+        if (ok) {
+          final cb = onReconnected;
+          if (cb != null) {
+            try {
+              await cb();
+            } catch (_) {/* engine resync is best-effort */}
+          }
+          return;
+        }
+        await Future<void>.delayed(Duration(seconds: attempt * 2));
+      }
+      if (!_disposed) {
+        _setStatus(FtmsConnectionStatus.error,
+            error: 'Lost connection to the treadmill.');
+      }
+    } finally {
+      _reconnecting = false;
     }
   }
 
@@ -347,6 +393,8 @@ class FtmsService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    onReconnected = null;
     for (final s in _subs) {
       s.cancel();
     }
