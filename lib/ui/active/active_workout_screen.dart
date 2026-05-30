@@ -129,7 +129,28 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
                     ?.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              if (current != null) ...[
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: engine.intervalProgress,
+                    minHeight: 6,
+                    backgroundColor:
+                        theme.colorScheme.secondary.withValues(alpha: 0.2),
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${formatClock(engine.elapsedInIntervalSec)} / '
+                  '${formatClock(current.durationSec)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
               Text(
                 formatClock(engine.remainingInIntervalSec),
                 style: theme.textTheme.displayLarge?.copyWith(
@@ -137,6 +158,13 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
                   color: theme.colorScheme.primary,
                 ),
               ),
+              if (current != null)
+                Text(
+                  'remaining',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               const SizedBox(height: 8),
               if (current != null)
                 Text(

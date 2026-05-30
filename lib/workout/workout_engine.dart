@@ -73,11 +73,24 @@ class WorkoutEngine extends ChangeNotifier {
     return (_elapsedTotalSec / totalDurationSec).clamp(0.0, 1.0);
   }
 
+  int get elapsedInIntervalSec {
+    final cur = currentInterval;
+    if (cur == null || cur.durationSec == 0) return 0;
+    return (cur.durationSec - _remainingInIntervalSec)
+        .clamp(0, cur.durationSec);
+  }
+
+  double get intervalProgress {
+    final cur = currentInterval;
+    if (cur == null || cur.durationSec == 0) return 0;
+    return (elapsedInIntervalSec / cur.durationSec).clamp(0.0, 1.0);
+  }
+
   bool get isActive =>
       _phase == WorkoutPhase.running || _phase == WorkoutPhase.paused;
 
-  /// Starts the plan: requests control, applies interval 0, and auto-starts the
-  /// belt (per the chosen design). Returns false if the treadmill rejects setup.
+  /// Starts the plan: requests control, starts the belt, then applies interval 0.
+  /// Returns false if the treadmill rejects setup.
   Future<bool> start(WorkoutPlan plan) async {
     if (plan.intervals.isEmpty) return false;
     await stop(sendStopCommand: false);
@@ -108,8 +121,10 @@ class WorkoutEngine extends ChangeNotifier {
     if (!_ftms.hasControl) {
       await _ftms.requestControl();
     }
-    await _applyInterval(plan.intervals.first);
+    // Start the belt first; many treadmills ignore target speed set while stopped.
     await _ftms.start();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await _applyInterval(plan.intervals.first);
 
     _startTicker();
     return true;
