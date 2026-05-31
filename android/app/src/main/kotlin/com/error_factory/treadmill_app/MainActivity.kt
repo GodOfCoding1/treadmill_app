@@ -1,4 +1,4 @@
-package com.example.treadmill_app
+package com.error_factory.treadmill_app
 
 import io.flutter.embedding.android.FlutterActivity
 
