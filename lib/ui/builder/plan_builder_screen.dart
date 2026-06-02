@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app_providers.dart';
 import '../../core/format.dart';
+import '../../core/interval_labels.dart';
 import '../../domain/workout_plan.dart';
 
 class PlanBuilderScreen extends ConsumerStatefulWidget {
@@ -27,8 +28,7 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
     _intervals = List<WorkoutInterval>.from(
       widget.existing?.intervals ??
           [
-            WorkoutInterval(
-                label: 'Warm up', durationSec: 300, speedKmh: 4.0),
+            WorkoutInterval(label: 'Warm up', durationSec: 300, speedKmh: 4.0),
           ],
     );
   }
@@ -39,8 +39,7 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
     super.dispose();
   }
 
-  int get _totalSec =>
-      _intervals.fold(0, (sum, i) => sum + i.durationSec);
+  int get _totalSec => _intervals.fold(0, (sum, i) => sum + i.durationSec);
 
   Future<void> _save() async {
     final repo = ref.read(planRepositoryProvider);
@@ -73,7 +72,7 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
       isScrollControlled: true,
       builder: (_) => _IntervalEditor(
         interval:
-            WorkoutInterval(label: 'Interval', durationSec: 120, speedKmh: 6.0),
+            WorkoutInterval(label: 'Run', durationSec: 120, speedKmh: 6.0),
       ),
     );
     if (result != null) {
@@ -135,8 +134,8 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
                 final iv = _intervals[index];
                 return Card(
                   key: ObjectKey(iv),
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: ListTile(
                     leading: const Icon(Icons.drag_handle),
                     title: Text(iv.label),
@@ -180,6 +179,7 @@ class _IntervalEditor extends StatefulWidget {
 
 class _IntervalEditorState extends State<_IntervalEditor> {
   late TextEditingController _label;
+  late String? _selectedPreset;
   late int _minutes;
   late int _seconds;
   late double _speed;
@@ -189,6 +189,7 @@ class _IntervalEditorState extends State<_IntervalEditor> {
   void initState() {
     super.initState();
     _label = TextEditingController(text: widget.interval.label);
+    _selectedPreset = matchingIntervalLabelPreset(widget.interval.label);
     _minutes = widget.interval.durationSec ~/ 60;
     _seconds = widget.interval.durationSec % 60;
     _speed = widget.interval.speedKmh;
@@ -213,74 +214,118 @@ class _IntervalEditorState extends State<_IntervalEditor> {
     );
   }
 
+  void _setPresetLabel(String preset) {
+    setState(() {
+      _selectedPreset = preset;
+      _label.value = TextEditingValue(
+        text: preset,
+        selection: TextSelection.collapsed(offset: preset.length),
+      );
+    });
+  }
+
+  void _syncSelectedPreset(String value) {
+    setState(() {
+      _selectedPreset = matchingIntervalLabelPreset(value);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Interval', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _label,
-            decoration: const InputDecoration(
-              labelText: 'Label',
-              border: OutlineInputBorder(),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Interval', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            Text('Label', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 2),
+            Text(
+              'Pick one or type your own',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _NumberStepper(
-                  label: 'Minutes',
-                  value: _minutes,
-                  min: 0,
-                  max: 180,
-                  onChanged: (v) => setState(() => _minutes = v),
-                ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final preset in kIntervalLabelPresets)
+                  FilterChip(
+                    label: Text(preset),
+                    selected: _selectedPreset == preset,
+                    showCheckmark: false,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    onSelected: (_) => _setPresetLabel(preset),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _label,
+              onChanged: _syncSelectedPreset,
+              decoration: const InputDecoration(
+                labelText: 'Custom label',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _NumberStepper(
-                  label: 'Seconds',
-                  value: _seconds,
-                  min: 0,
-                  max: 59,
-                  step: 5,
-                  onChanged: (v) => setState(() => _seconds = v),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _NumberStepper(
+                    label: 'Minutes',
+                    value: _minutes,
+                    min: 0,
+                    max: 180,
+                    onChanged: (v) => setState(() => _minutes = v),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _LabeledSlider(
-            label: 'Speed',
-            value: _speed,
-            min: 0,
-            max: 20,
-            step: 0.5,
-            unit: 'km/h',
-            onChanged: (v) => setState(() => _speed = v),
-          ),
-          _LabeledSlider(
-            label: 'Incline',
-            value: _incline,
-            min: 0,
-            max: 15,
-            step: 0.5,
-            unit: '%',
-            onChanged: (v) => setState(() => _incline = v),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _submit,
-            child: const Text('Done'),
-          ),
-        ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _NumberStepper(
+                    label: 'Seconds',
+                    value: _seconds,
+                    min: 0,
+                    max: 59,
+                    step: 5,
+                    onChanged: (v) => setState(() => _seconds = v),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _LabeledSlider(
+              label: 'Speed',
+              value: _speed,
+              min: 0,
+              max: 20,
+              step: 0.5,
+              unit: 'km/h',
+              onChanged: (v) => setState(() => _speed = v),
+            ),
+            _LabeledSlider(
+              label: 'Incline',
+              value: _incline,
+              min: 0,
+              max: 15,
+              step: 0.5,
+              unit: '%',
+              onChanged: (v) => setState(() => _incline = v),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _submit,
+              child: const Text('Done'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -319,8 +364,7 @@ class _NumberStepper extends StatelessWidget {
                   : null,
               icon: const Icon(Icons.remove),
             ),
-            Text('$value',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text('$value', style: Theme.of(context).textTheme.titleLarge),
             IconButton.filledTonal(
               onPressed: value < max
                   ? () => onChanged((value + step).clamp(min, max))

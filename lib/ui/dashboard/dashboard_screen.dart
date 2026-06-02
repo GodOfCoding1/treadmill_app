@@ -174,6 +174,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: Colors.redAccent.shade200,
+              foregroundColor: Colors.white,
             ),
             onPressed: () async {
               await ftms.stop();

@@ -220,6 +220,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.redAccent.shade200,
+                        foregroundColor: Colors.white,
                       ),
                       onPressed: _confirmStop,
                       icon: const Icon(Icons.stop),
