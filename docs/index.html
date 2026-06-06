@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treadmill — Privacy Policy</title>
+  <meta name="description" content="Privacy policy for the Treadmill Android app by RunForge.">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fafafa;
+      --text: #1a1a1a;
+      --muted: #555;
+      --border: #ddd;
+      --accent: #1565c0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --text: #f0f0f0;
+        --muted: #aaa;
+        --border: #333;
+        --accent: #64b5f6;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin: 0 0 0.25rem;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      margin-top: 2rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
+    }
+    ul { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    a { color: var(--accent); }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Treadmill — Privacy Policy</h1>
+    <p class="meta">
+      <strong>App:</strong> Treadmill<br>
+      <strong>Developer:</strong> RunForge<br>
+      <strong>Package:</strong> com.error_factory.treadmill_app<br>
+      <strong>Effective date:</strong> June 6, 2026<br>
+      <strong>Last updated:</strong> June 6, 2026
+    </p>
+
+    <p>
+      This Privacy Policy describes how the Treadmill mobile application
+      (&ldquo;App&rdquo;) handles information when you use it to connect to and
+      control FTMS-compatible treadmills over Bluetooth Low Energy (BLE).
+    </p>
+
+    <h2>Summary</h2>
+    <p>
+      Treadmill is designed to work entirely on your device. We do not operate
+      user accounts, analytics services, or cloud backends for this App. Data
+      you generate while using the App stays on your phone unless you choose to
+      share it yourself (for example, by exporting or screenshotting content).
+    </p>
+
+    <h2>Information the App Uses</h2>
+    <p>Depending on how you use the App, the following information may be processed:</p>
+    <ul>
+      <li>
+        <strong>Bluetooth and nearby devices.</strong> The App scans for nearby
+        BLE devices to find treadmills, connects to the device you select, and
+        exchanges fitness-machine data (such as speed, incline, distance, elapsed
+        time, heart rate, and energy) with that treadmill using the open FTMS
+        standard.
+      </li>
+      <li>
+        <strong>Workout plans.</strong> Custom interval plans you create (names,
+        speeds, inclines, and durations) are stored locally on your device.
+      </li>
+      <li>
+        <strong>Activity history.</strong> Completed sessions that meet the
+        App&rsquo;s minimum duration threshold may be saved locally, including
+        start/end times, duration, workout type, optional plan name, distance,
+        average speed, calories, and heart rate when reported by the treadmill.
+      </li>
+      <li>
+        <strong>Reminder settings.</strong> If you enable notifications, your
+        chosen reminder times and on/off preferences are stored locally so the
+        App can schedule local alerts.
+      </li>
+    </ul>
+
+    <h2>Information Stored on Your Device</h2>
+    <p>
+      The App uses your device&rsquo;s local storage (Android
+      <code>SharedPreferences</code>) to save workout plans, activity history,
+      and reminder settings. This data is not transmitted to RunForge or any
+      third-party server by the App.
+    </p>
+
+    <h2>Permissions</h2>
+    <p>The App may request the following device permissions:</p>
+    <ul>
+      <li>
+        <strong>Bluetooth</strong> — required to discover, connect to, and
+        control your treadmill.
+      </li>
+      <li>
+        <strong>Location (older Android versions only)</strong> — on some Android
+        versions, the operating system requires location permission for BLE
+        scanning even though the App does not use your GPS location for tracking.
+        On Android 12 and above, the App requests Bluetooth scan access without
+        using it for location.
+      </li>
+      <li>
+        <strong>Notifications</strong> — used only for optional workout reminders
+        and streak nudges that you configure in settings.
+      </li>
+      <li>
+        <strong>Foreground service and wake lock</strong> — used during active
+        workouts so the BLE connection and workout timer continue while the App
+        is in the background (for example, when the screen is off).
+      </li>
+      <li>
+        <strong>Boot completed</strong> — used to reschedule local notifications
+        after your device restarts, if you have reminders enabled.
+      </li>
+    </ul>
+
+    <h2>What We Do Not Collect</h2>
+    <ul>
+      <li>We do not require you to create an account.</li>
+      <li>We do not collect your name, email address, or phone number through the App.</li>
+      <li>We do not sell or rent personal information.</li>
+      <li>We do not use third-party advertising or analytics SDKs in the App.</li>
+      <li>We do not upload your workout or health-related data to our servers.</li>
+    </ul>
+
+    <h2>Third-Party Services</h2>
+    <p>
+      The App communicates directly with your treadmill over BLE. It does not
+      send your personal data to treadmill manufacturers through RunForge
+      servers. Your use of Google Play to install or update the App is subject
+      to Google&rsquo;s own privacy policies.
+    </p>
+
+    <h2>Children&rsquo;s Privacy</h2>
+    <p>
+      The App is not directed at children under 13, and we do not knowingly
+      collect personal information from children. If you believe a child has
+      provided personal information through the App, please contact us and we
+      will assist with deletion of locally stored data on the device.
+    </p>
+
+    <h2>Data Retention and Deletion</h2>
+    <p>
+      Data stored by the App remains on your device until you delete it within
+      the App (where supported), clear the App&rsquo;s storage in Android system
+      settings, or uninstall the App.
+    </p>
+
+    <h2>Security</h2>
+    <p>
+      Because data stays on your device, its security also depends on your
+      device settings (screen lock, backups, and who has physical access to your
+      phone). BLE communication occurs between your phone and your treadmill
+      within normal Bluetooth range.
+    </p>
+
+    <h2>Changes to This Policy</h2>
+    <p>
+      We may update this Privacy Policy from time to time. When we do, we will
+      revise the &ldquo;Last updated&rdquo; date at the top of this page. Continued
+      use of the App after changes become effective means you accept the updated
+      policy.
+    </p>
+
+    <h2>Contact Us</h2>
+    <p>
+      If you have questions about this Privacy Policy or the App, contact us at:
+    </p>
+    <p>
+      Open an issue on the project repository:<br>
+      <a href="https://github.com/GodOfCoding1/treadmill_app/issues">github.com/GodOfCoding1/treadmill_app/issues</a>
+    </p>
+    <p>
+      For Google Play support inquiries, use the contact email listed on the
+      App&rsquo;s Play Store listing.
+    </p>
+
+    <footer>
+      &copy; 2026 RunForge. All rights reserved.
+    </footer>
+  </main>
+</body>
+</html>
