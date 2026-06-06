@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app_providers.dart';
 import '../../ble/scan_controller.dart';
 import '../connect_gate.dart';
+import '../layout/responsive.dart';
 import '../router.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -64,39 +65,42 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       ),
       body: _connecting
           ? const _Connecting()
-          : RefreshIndicator(
-              onRefresh: scan.startScan,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                children: [
-                  if (scan.error != null)
-                    _Banner(text: scan.error!, color: Colors.redAccent),
-                  if (scan.isScanning) const _ScanningIndicator(),
-                  _Section(
-                    title: 'Treadmills found',
-                    icon: Icons.directions_run,
-                    highlight: true,
-                    devices: scan.treadmills,
-                    onTap: _connect,
-                    emptyHint: scan.isScanning
-                        ? 'Scanning for FTMS treadmills…'
-                        : 'No treadmills detected yet. Tap Scan.',
-                  ),
-                  if (scan.possibleFitness.isNotEmpty)
+          : AdaptiveConstraints(
+              maxWidth: 720,
+              child: RefreshIndicator(
+                onRefresh: scan.startScan,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  children: [
+                    if (scan.error != null)
+                      _Banner(text: scan.error!, color: Colors.redAccent),
+                    if (scan.isScanning) const _ScanningIndicator(),
                     _Section(
-                      title: 'Possible fitness devices',
-                      icon: Icons.fitness_center,
-                      devices: scan.possibleFitness,
+                      title: 'Treadmills found',
+                      icon: Icons.directions_run,
+                      highlight: true,
+                      devices: scan.treadmills,
+                      onTap: _connect,
+                      emptyHint: scan.isScanning
+                          ? 'Scanning for FTMS treadmills…'
+                          : 'No treadmills detected yet. Tap Scan.',
+                    ),
+                    if (scan.possibleFitness.isNotEmpty)
+                      _Section(
+                        title: 'Possible fitness devices',
+                        icon: Icons.fitness_center,
+                        devices: scan.possibleFitness,
+                        onTap: _connect,
+                      ),
+                    _Section(
+                      title: 'Other nearby devices',
+                      icon: Icons.bluetooth,
+                      dimmed: true,
+                      devices: scan.otherDevices,
                       onTap: _connect,
                     ),
-                  _Section(
-                    title: 'Other nearby devices',
-                    icon: Icons.bluetooth,
-                    dimmed: true,
-                    devices: scan.otherDevices,
-                    onTap: _connect,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -218,8 +222,8 @@ class _Section extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: Text(
               emptyHint!,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
             ),
           )
         else

@@ -7,6 +7,7 @@ import 'activity/activity_calendar_screen.dart';
 import 'builder/plan_builder_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'home/home_screen.dart';
+import 'layout/responsive.dart';
 import 'plans/plan_list_screen.dart';
 import 'scan/scan_screen.dart';
 import 'settings/reminders_screen.dart';
@@ -97,32 +98,67 @@ class _ScaffoldWithNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const destinations = _navDestinations;
+    final selectedIndex = navigationShell.currentIndex;
+    void onDestinationSelected(int index) {
+      navigationShell.goBranch(
+        index,
+        initialLocation: index == selectedIndex,
+      );
+    }
+
+    if (isLandscape(context)) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onDestinationSelected,
+                labelType: NavigationRailLabelType.all,
+                destinations: destinations
+                    .map(
+                      (destination) => NavigationRailDestination(
+                        icon: destination.icon,
+                        selectedIcon: destination.selectedIcon,
+                        label: Text(destination.label),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: navigationShell),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: 'Plans',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Activity',
-          ),
-        ],
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+        destinations: destinations,
       ),
     );
   }
 }
+
+const _navDestinations = [
+  NavigationDestination(
+    icon: Icon(Icons.home_outlined),
+    selectedIcon: Icon(Icons.home),
+    label: 'Home',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.list_alt_outlined),
+    selectedIcon: Icon(Icons.list_alt),
+    label: 'Plans',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.calendar_month_outlined),
+    selectedIcon: Icon(Icons.calendar_month),
+    label: 'Activity',
+  ),
+];

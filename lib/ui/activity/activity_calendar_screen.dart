@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../core/format.dart';
 import '../../domain/activity_entry.dart';
+import '../layout/responsive.dart';
 
 class ActivityCalendarScreen extends ConsumerStatefulWidget {
   const ActivityCalendarScreen({super.key});
@@ -26,8 +27,7 @@ class _ActivityCalendarScreenState
 
   void _changeMonth(int delta) {
     setState(() {
-      _visibleMonth =
-          DateTime(_visibleMonth.year, _visibleMonth.month + delta);
+      _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + delta);
     });
   }
 
@@ -39,33 +39,76 @@ class _ActivityCalendarScreenState
       appBar: AppBar(title: const Text('Activity')),
       body: activitiesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            Center(child: Text('Failed to load activity: $e')),
+        error: (e, _) => Center(child: Text('Failed to load activity: $e')),
         data: (activities) {
           final byDay = <DateTime, List<ActivityEntry>>{};
           for (final a in activities) {
             byDay.putIfAbsent(a.day, () => []).add(a);
           }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _MonthHeader(
-                month: _visibleMonth,
-                onPrev: () => _changeMonth(-1),
-                onNext: () => _changeMonth(1),
+          return OrientationLayout(
+            portrait: (_) => ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _MonthHeader(
+                  month: _visibleMonth,
+                  onPrev: () => _changeMonth(-1),
+                  onNext: () => _changeMonth(1),
+                ),
+                const SizedBox(height: 12),
+                _CalendarGrid(
+                  month: _visibleMonth,
+                  byDay: byDay,
+                  onDayTap: (day, entries) =>
+                      _showDayDetails(context, day, entries),
+                ),
+                const SizedBox(height: 16),
+                _MonthSummary(month: _visibleMonth, byDay: byDay),
+                const SizedBox(height: 16),
+                const _MinDurationNote(),
+              ],
+            ),
+            landscape: (_) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _MonthHeader(
+                            month: _visibleMonth,
+                            onPrev: () => _changeMonth(-1),
+                            onNext: () => _changeMonth(1),
+                          ),
+                          const SizedBox(height: 12),
+                          _CalendarGrid(
+                            month: _visibleMonth,
+                            byDay: byDay,
+                            onDayTap: (day, entries) =>
+                                _showDayDetails(context, day, entries),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 2,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _MonthSummary(month: _visibleMonth, byDay: byDay),
+                          const SizedBox(height: 16),
+                          const _MinDurationNote(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _CalendarGrid(
-                month: _visibleMonth,
-                byDay: byDay,
-                onDayTap: (day, entries) =>
-                    _showDayDetails(context, day, entries),
-              ),
-              const SizedBox(height: 16),
-              _MonthSummary(month: _visibleMonth, byDay: byDay),
-              const SizedBox(height: 16),
-              const _MinDurationNote(),
-            ],
+            ),
           );
         },
       ),
@@ -74,7 +117,7 @@ class _ActivityCalendarScreenState
 
   void _showDayDetails(
       BuildContext context, DateTime day, List<ActivityEntry> entries) {
-    showModalBottomSheet<void>(
+    showAdaptiveSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -143,8 +186,8 @@ class _CalendarGrid extends StatelessWidget {
     for (final w in weekdays) {
       cells.add(Center(
         child: Text(w,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: theme.hintColor)),
+            style:
+                theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
       ));
     }
     for (var i = 0; i < leadingBlanks; i++) {
@@ -197,9 +240,7 @@ class _DayCell extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: BoxDecoration(
-          color: hasActivity
-              ? theme.colorScheme.primary
-              : Colors.transparent,
+          color: hasActivity ? theme.colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: isToday
               ? Border.all(color: theme.colorScheme.primary, width: 1.5)
@@ -263,11 +304,9 @@ class _MonthSummary extends ConsumerWidget {
               _SummaryRow(
                   label: 'Longest streak', value: '${streak.longest} days'),
             ],
+            _SummaryRow(label: 'Active days', value: '$activeDays'),
             _SummaryRow(
-                label: 'Active days', value: '$activeDays'),
-            _SummaryRow(
-                label: 'Total time',
-                value: formatDuration(totalDurationSec)),
+                label: 'Total time', value: formatDuration(totalDurationSec)),
             if (hasDistance)
               _SummaryRow(
                 label: 'Total distance',
@@ -311,8 +350,7 @@ class _MinDurationNote extends StatelessWidget {
         Expanded(
           child: Text(
             'Runs count as activity after 20 minutes. Keep it up!',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.hintColor),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
           ),
         ),
       ],
@@ -344,8 +382,8 @@ class _DayDetailsSheet extends StatelessWidget {
             Text(
               '${entries.length} '
               '${entries.length == 1 ? 'activity' : 'activities'}',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
             ),
             const SizedBox(height: 12),
             Flexible(
@@ -371,14 +409,11 @@ class _ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isPlan = entry.type == ActivityType.plan;
-    final title = isPlan
-        ? (entry.planName ?? 'Workout plan')
-        : 'Manual run';
+    final title = isPlan ? (entry.planName ?? 'Workout plan') : 'Manual run';
 
     final stats = <String>[];
     if (entry.distanceMeters != null) {
-      stats.add(
-          '${(entry.distanceMeters! / 1000).toStringAsFixed(2)} km');
+      stats.add('${(entry.distanceMeters! / 1000).toStringAsFixed(2)} km');
     }
     if (entry.averageSpeedKmh != null) {
       stats.add('${entry.averageSpeedKmh!.toStringAsFixed(1)} km/h avg');
@@ -421,8 +456,8 @@ class _ActivityCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 stats.join('  ·  '),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.hintColor),
+                style:
+                    theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
               ),
             ],
           ],
@@ -434,16 +469,31 @@ class _ActivityCard extends StatelessWidget {
 
 String _monthName(int month) {
   const names = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   return names[(month - 1) % 12];
 }
 
 String _weekdayName(int weekday) {
   const names = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
-    'Saturday', 'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
   return names[(weekday - 1) % 7];
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app_providers.dart';
 import '../../domain/activity_entry.dart';
 import '../../workout/foreground_service.dart';
+import '../layout/responsive.dart';
 import '../router.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -36,23 +37,170 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final supportsIncline = caps?.supportsInclinationTarget ?? false;
     final data = ftms.data;
+    final metricRows = [
+      Row(
+        children: [
+          Expanded(
+            child: _LiveMetric(
+              label: 'Speed',
+              value: (data.instantaneousSpeedKmh ?? 0).toStringAsFixed(1),
+              unit: 'km/h',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _LiveMetric(
+              label: 'Incline',
+              value: (data.inclinationPercent ?? 0).toStringAsFixed(1),
+              unit: '%',
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: _LiveMetric(
+              label: 'Distance',
+              value:
+                  ((data.totalDistanceMeters ?? 0) / 1000).toStringAsFixed(2),
+              unit: 'km',
+              small: true,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _LiveMetric(
+              label: 'Heart rate',
+              value: data.heartRateBpm?.toString() ?? '--',
+              unit: 'bpm',
+              small: true,
+            ),
+          ),
+        ],
+      ),
+    ];
+    final controls = [
+      _SliderCard(
+        label: 'Target speed',
+        value: _targetSpeed,
+        min: caps?.minSpeed ?? 0,
+        max: caps?.maxSpeed ?? 20,
+        step: caps?.speedStep ?? 0.5,
+        unit: 'km/h',
+        onChanged: (v) => setState(() {
+          _userTouchedSpeed = true;
+          _targetSpeed = v;
+        }),
+        onChangeEnd: (v) => ftms.setSpeed(v),
+      ),
+      if (supportsIncline)
+        _SliderCard(
+          label: 'Target incline',
+          value: _targetIncline,
+          min: caps?.minIncline ?? 0,
+          max: caps?.maxIncline ?? 15,
+          step: caps?.inclineStep ?? 0.5,
+          unit: '%',
+          onChanged: (v) => setState(() => _targetIncline = v),
+          onChangeEnd: (v) => ftms.setIncline(v),
+        )
+      else
+        const _InfoNote(
+            text: 'This treadmill does not support incline control.'),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () async {
+                // Start uses the treadmill's last target speed; apply the
+                // slider values first so it doesn't default to ~1 km/h.
+                await ftms.setSpeed(_targetSpeed);
+                if (supportsIncline) {
+                  await ftms.setIncline(_targetIncline);
+                }
+                await ftms.start();
+                final tracker = ref.read(activityTrackerProvider);
+                if (!tracker.isTracking) {
+                  tracker.begin(type: ActivityType.manual);
+                  await WorkoutForegroundService.requestPermissions();
+                  await WorkoutForegroundService.start(
+                    title: 'Manual run',
+                    text: 'Treadmill running',
+                  );
+                }
+              },
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Start'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FilledButton.tonalIcon(
+              onPressed: () => ftms.pause(),
+              icon: const Icon(Icons.pause),
+              label: const Text('Pause'),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.redAccent.shade200,
+          foregroundColor: Colors.white,
+        ),
+        onPressed: () async {
+          await ftms.stop();
+          await WorkoutForegroundService.stop();
+          final tracker = ref.read(activityTrackerProvider);
+          final entry = await tracker.complete();
+          if (entry != null) {
+            ref.invalidate(activitiesProvider);
+            await rescheduleReminders(ref);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Activity logged.')),
+              );
+            }
+          }
+        },
+        icon: const Icon(Icons.stop),
+        label: const Text('Stop'),
+      ),
+      const SizedBox(height: 24),
+      OutlinedButton.icon(
+        onPressed: () => context.push(AppRoutes.reminders),
+        icon: const Icon(Icons.notifications_outlined),
+        label: const Text('Reminders'),
+      ),
+      const SizedBox(height: 8),
+      TextButton.icon(
+        onPressed: () async {
+          await ftms.disconnect();
+          if (context.mounted) context.go(AppRoutes.home);
+        },
+        icon: const Icon(Icons.bluetooth_disabled),
+        label: const Text('Disconnect'),
+      ),
+    ];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(ftms.deviceName),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoutes.home),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Row(
               children: [
-                Icon(Icons.circle,
-                    size: 12, color: theme.colorScheme.primary),
+                Icon(Icons.circle, size: 12, color: theme.colorScheme.primary),
                 const SizedBox(width: 6),
                 const Text('Connected'),
               ],
@@ -60,156 +208,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          Row(
+      body: OrientationLayout(
+        portrait: (_) => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            ...metricRows,
+            const SizedBox(height: 24),
+            ...controls,
+          ],
+        ),
+        landscape: (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _LiveMetric(
-                  label: 'Speed',
-                  value: (data.instantaneousSpeedKmh ?? 0).toStringAsFixed(1),
-                  unit: 'km/h',
+                child: SingleChildScrollView(
+                  child: Column(children: metricRows),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 20),
               Expanded(
-                child: _LiveMetric(
-                  label: 'Incline',
-                  value: (data.inclinationPercent ?? 0).toStringAsFixed(1),
-                  unit: '%',
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: controls,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _LiveMetric(
-                  label: 'Distance',
-                  value: ((data.totalDistanceMeters ?? 0) / 1000)
-                      .toStringAsFixed(2),
-                  unit: 'km',
-                  small: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _LiveMetric(
-                  label: 'Heart rate',
-                  value: data.heartRateBpm?.toString() ?? '--',
-                  unit: 'bpm',
-                  small: true,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _SliderCard(
-            label: 'Target speed',
-            value: _targetSpeed,
-            min: caps?.minSpeed ?? 0,
-            max: caps?.maxSpeed ?? 20,
-            step: caps?.speedStep ?? 0.5,
-            unit: 'km/h',
-            onChanged: (v) => setState(() {
-              _userTouchedSpeed = true;
-              _targetSpeed = v;
-            }),
-            onChangeEnd: (v) => ftms.setSpeed(v),
-          ),
-          if (supportsIncline)
-            _SliderCard(
-              label: 'Target incline',
-              value: _targetIncline,
-              min: caps?.minIncline ?? 0,
-              max: caps?.maxIncline ?? 15,
-              step: caps?.inclineStep ?? 0.5,
-              unit: '%',
-              onChanged: (v) => setState(() => _targetIncline = v),
-              onChangeEnd: (v) => ftms.setIncline(v),
-            )
-          else
-            const _InfoNote(
-                text: 'This treadmill does not support incline control.'),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () async {
-                    // Start uses the treadmill's last target speed; apply the
-                    // slider values first so it doesn't default to ~1 km/h.
-                    await ftms.setSpeed(_targetSpeed);
-                    if (supportsIncline) {
-                      await ftms.setIncline(_targetIncline);
-                    }
-                    await ftms.start();
-                    final tracker = ref.read(activityTrackerProvider);
-                    if (!tracker.isTracking) {
-                      tracker.begin(type: ActivityType.manual);
-                      await WorkoutForegroundService.requestPermissions();
-                      await WorkoutForegroundService.start(
-                        title: 'Manual run',
-                        text: 'Treadmill running',
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: () => ftms.pause(),
-                  icon: const Icon(Icons.pause),
-                  label: const Text('Pause'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent.shade200,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              await ftms.stop();
-              await WorkoutForegroundService.stop();
-              final tracker = ref.read(activityTrackerProvider);
-              final entry = await tracker.complete();
-              if (entry != null) {
-                ref.invalidate(activitiesProvider);
-                await rescheduleReminders(ref);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Activity logged.')),
-                  );
-                }
-              }
-            },
-            icon: const Icon(Icons.stop),
-            label: const Text('Stop'),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () => context.push(AppRoutes.reminders),
-            icon: const Icon(Icons.notifications_outlined),
-            label: const Text('Reminders'),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () async {
-              await ftms.disconnect();
-              if (context.mounted) context.go(AppRoutes.home);
-            },
-            icon: const Icon(Icons.bluetooth_disabled),
-            label: const Text('Disconnect'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -225,9 +254,8 @@ class _Disconnected extends ConsumerWidget {
         title: const Text('Treadmill'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoutes.home),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
       ),
       body: Center(

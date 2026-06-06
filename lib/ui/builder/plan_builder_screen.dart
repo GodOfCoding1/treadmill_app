@@ -6,6 +6,7 @@ import '../../app_providers.dart';
 import '../../core/format.dart';
 import '../../core/interval_labels.dart';
 import '../../domain/workout_plan.dart';
+import '../layout/responsive.dart';
 
 class PlanBuilderScreen extends ConsumerStatefulWidget {
   const PlanBuilderScreen({super.key, this.existing});
@@ -56,7 +57,7 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
   }
 
   Future<void> _editInterval(int index) async {
-    final result = await showModalBottomSheet<WorkoutInterval>(
+    final result = await showAdaptiveSheet<WorkoutInterval>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _IntervalEditor(interval: _intervals[index]),
@@ -67,7 +68,7 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
   }
 
   Future<void> _addInterval() async {
-    final result = await showModalBottomSheet<WorkoutInterval>(
+    final result = await showAdaptiveSheet<WorkoutInterval>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _IntervalEditor(
@@ -97,74 +98,107 @@ class _PlanBuilderScreenState extends ConsumerState<PlanBuilderScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Add interval'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Plan name',
-                border: OutlineInputBorder(),
+      body: OrientationLayout(
+        portrait: (_) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Plan name',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '${_intervals.length} intervals  ·  '
-                '${formatDuration(_totalSec)} total',
-                style: Theme.of(context).textTheme.bodySmall,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_intervals.length} intervals  ·  '
+                  '${formatDuration(_totalSec)} total',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
-              itemCount: _intervals.length,
-              onReorderItem: (oldIndex, newIndex) {
-                setState(() {
-                  final item = _intervals.removeAt(oldIndex);
-                  _intervals.insert(newIndex, item);
-                });
-              },
-              itemBuilder: (context, index) {
-                final iv = _intervals[index];
-                return Card(
-                  key: ObjectKey(iv),
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: ListTile(
-                    leading: const Icon(Icons.drag_handle),
-                    title: Text(iv.label),
-                    subtitle: Text(
-                      '${formatClock(iv.durationSec)}  ·  '
-                      '${iv.speedKmh.toStringAsFixed(1)} km/h  ·  '
-                      '${iv.inclinePct.toStringAsFixed(1)}%',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () => _editInterval(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          onPressed: () =>
-                              setState(() => _intervals.removeAt(index)),
-                        ),
-                      ],
+            Expanded(child: _intervalList()),
+          ],
+        ),
+        landscape: (_) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Plan name',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
-                );
-              },
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      '${_intervals.length} intervals  ·  '
+                      '${formatDuration(_totalSec)} total',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _intervalList()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _intervalList() {
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+      itemCount: _intervals.length,
+      onReorderItem: (oldIndex, newIndex) {
+        setState(() {
+          final item = _intervals.removeAt(oldIndex);
+          _intervals.insert(newIndex, item);
+        });
+      },
+      itemBuilder: (context, index) {
+        final iv = _intervals[index];
+        return Card(
+          key: ObjectKey(iv),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            leading: const Icon(Icons.drag_handle),
+            title: Text(iv.label),
+            subtitle: Text(
+              '${formatClock(iv.durationSec)}  ·  '
+              '${iv.speedKmh.toStringAsFixed(1)} km/h  ·  '
+              '${iv.inclinePct.toStringAsFixed(1)}%',
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () => _editInterval(index),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: () => setState(() => _intervals.removeAt(index)),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

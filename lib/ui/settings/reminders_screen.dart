@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../domain/reminder_settings.dart';
 import '../../domain/streak.dart';
+import '../layout/responsive.dart';
 
 class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({super.key});
@@ -22,49 +23,52 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reminders')),
-      body: settingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Failed to load reminders: $e')),
-        data: (loaded) {
-          final settings = _settings ??= loaded;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              _ReminderTile(
-                title: 'Daily workout reminder',
-                subtitle: 'A nudge to get on the treadmill every day.',
-                enabled: settings.dailyEnabled,
-                time: settings.dailyTime,
-                onToggle: (v) => setState(
-                    () => _settings = settings.copyWith(dailyEnabled: v)),
-                onPickTime: (t) => setState(
-                    () => _settings = settings.copyWith(dailyTime: t)),
-              ),
-              const SizedBox(height: 8),
-              _ReminderTile(
-                title: 'Streak reminder',
-                subtitle: 'Remind me if I haven\'t kept my streak alive.',
-                enabled: settings.streakEnabled,
-                time: settings.streakTime,
-                onToggle: (v) => setState(
-                    () => _settings = settings.copyWith(streakEnabled: v)),
-                onPickTime: (t) => setState(
-                    () => _settings = settings.copyWith(streakTime: t)),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _saving ? null : () => _save(settings),
-                child: _saving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
-              ),
-            ],
-          );
-        },
+      body: AdaptiveConstraints(
+        maxWidth: 640,
+        child: settingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Failed to load reminders: $e')),
+          data: (loaded) {
+            final settings = _settings ??= loaded;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _ReminderTile(
+                  title: 'Daily workout reminder',
+                  subtitle: 'A nudge to get on the treadmill every day.',
+                  enabled: settings.dailyEnabled,
+                  time: settings.dailyTime,
+                  onToggle: (v) => setState(
+                      () => _settings = settings.copyWith(dailyEnabled: v)),
+                  onPickTime: (t) => setState(
+                      () => _settings = settings.copyWith(dailyTime: t)),
+                ),
+                const SizedBox(height: 8),
+                _ReminderTile(
+                  title: 'Streak reminder',
+                  subtitle: 'Remind me if I haven\'t kept my streak alive.',
+                  enabled: settings.streakEnabled,
+                  time: settings.streakTime,
+                  onToggle: (v) => setState(
+                      () => _settings = settings.copyWith(streakEnabled: v)),
+                  onPickTime: (t) => setState(
+                      () => _settings = settings.copyWith(streakTime: t)),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _saving ? null : () => _save(settings),
+                  child: _saving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -139,9 +143,8 @@ class _ReminderTile extends StatelessWidget {
               trailing: Text(
                 time.format(context),
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: enabled
-                      ? theme.colorScheme.primary
-                      : theme.disabledColor,
+                  color:
+                      enabled ? theme.colorScheme.primary : theme.disabledColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),

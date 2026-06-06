@@ -6,6 +6,7 @@ import '../../app_providers.dart';
 import '../../core/format.dart';
 import '../../domain/workout_plan.dart';
 import '../connect_gate.dart';
+import '../layout/responsive.dart';
 import '../router.dart';
 
 class PlanListScreen extends ConsumerWidget {
@@ -34,12 +35,32 @@ class PlanListScreen extends ConsumerWidget {
               child: Text('No plans yet. Tap "Create plan" to begin.'),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            itemCount: plans.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) =>
-                _PlanCard(plan: plans[i]),
+          return OrientationLayout(
+            portrait: (_) => ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              itemCount: plans.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, i) => _PlanCard(plan: plans[i]),
+            ),
+            landscape: (_) => isWide(context)
+                ? GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      mainAxisExtent: 184,
+                    ),
+                    itemCount: plans.length,
+                    itemBuilder: (context, i) => _PlanCard(plan: plans[i]),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    itemCount: plans.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) => _PlanCard(plan: plans[i]),
+                  ),
           );
         },
       ),
@@ -69,8 +90,8 @@ class _PlanCard extends ConsumerWidget {
             Text(
               '${plan.intervalCount} intervals  ·  '
               '${formatDuration(plan.totalDurationSec)} total',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
             ),
             const SizedBox(height: 12),
             Row(

@@ -8,6 +8,7 @@ import '../../core/format.dart';
 import '../../domain/activity_entry.dart';
 import '../../domain/workout_plan.dart';
 import '../connect_gate.dart';
+import '../layout/responsive.dart';
 import '../router.dart';
 import '../widgets/streak_banner.dart';
 
@@ -16,8 +17,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Treadmill'),
@@ -28,27 +27,95 @@ class HomeScreen extends ConsumerWidget {
           SizedBox(width: 4),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          const StreakBanner(),
-          const SizedBox(height: 16),
-          const _WeeklySummaryCard(),
-          const SizedBox(height: 24),
-          Text('Quick start',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const _QuickStartPlans(),
-          const SizedBox(height: 24),
-          FilledButton.tonalIcon(
-            onPressed: () =>
-                ensureConnectedThen(context, ref, const OpenControlIntent()),
-            icon: const Icon(Icons.directions_run),
-            label: const Text('Manual run (no plan)'),
-          ),
-        ],
-      ),
+      body: const _HomeBody(),
+    );
+  }
+}
+
+class _HomeBody extends ConsumerWidget {
+  const _HomeBody();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return OrientationLayout(
+      portrait: (_) => _HomeList(ref: ref),
+      landscape: (_) => isWide(context)
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          StreakBanner(),
+                          SizedBox(height: 16),
+                          _WeeklySummaryCard(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _QuickStartSection(ref: ref),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _HomeList(ref: ref),
+    );
+  }
+}
+
+class _HomeList extends StatelessWidget {
+  const _HomeList({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        const StreakBanner(),
+        const SizedBox(height: 16),
+        const _WeeklySummaryCard(),
+        const SizedBox(height: 24),
+        _QuickStartSection(ref: ref),
+      ],
+    );
+  }
+}
+
+class _QuickStartSection extends StatelessWidget {
+  const _QuickStartSection({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Quick start',
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const _QuickStartPlans(),
+        const SizedBox(height: 24),
+        FilledButton.tonalIcon(
+          onPressed: () =>
+              ensureConnectedThen(context, ref, const OpenControlIntent()),
+          icon: const Icon(Icons.directions_run),
+          label: const Text('Manual run (no plan)'),
+        ),
+      ],
     );
   }
 }
@@ -69,9 +136,8 @@ class _ConnectionChip extends ConsumerWidget {
     final color = connected
         ? theme.colorScheme.primary
         : (busy ? Colors.amber : theme.disabledColor);
-    final label = connected
-        ? 'Connected'
-        : (busy ? 'Connecting' : 'Disconnected');
+    final label =
+        connected ? 'Connected' : (busy ? 'Connecting' : 'Disconnected');
 
     return ActionChip(
       avatar: Icon(Icons.circle, size: 12, color: color),
@@ -120,10 +186,9 @@ class _WeeklySummaryCard extends ConsumerWidget {
     }).toList();
 
     final runs = thisWeek.length;
-    final totalSec =
-        thisWeek.fold<int>(0, (sum, a) => sum + a.durationSec);
-    final distanceMeters = thisWeek.fold<int>(
-        0, (sum, a) => sum + (a.distanceMeters ?? 0));
+    final totalSec = thisWeek.fold<int>(0, (sum, a) => sum + a.durationSec);
+    final distanceMeters =
+        thisWeek.fold<int>(0, (sum, a) => sum + (a.distanceMeters ?? 0));
 
     return Card(
       child: Padding(
@@ -147,8 +212,7 @@ class _WeeklySummaryCard extends ConsumerWidget {
             Row(
               children: [
                 _SummaryStat(label: 'Runs', value: '$runs'),
-                _SummaryStat(
-                    label: 'Time', value: formatDuration(totalSec)),
+                _SummaryStat(label: 'Time', value: formatDuration(totalSec)),
                 _SummaryStat(
                   label: 'Distance',
                   value: '${(distanceMeters / 1000).toStringAsFixed(1)} km',
@@ -180,8 +244,8 @@ class _SummaryStat extends StatelessWidget {
                 color: theme.colorScheme.primary,
               )),
           Text(label,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.hintColor)),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
         ],
       ),
     );
