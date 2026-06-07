@@ -84,7 +84,11 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen>
       return _SummaryView(
         plan: widget.plan,
         elapsedSec: engine.elapsedTotalSec,
-        onDone: () {
+        onDone: () async {
+          await ref
+              .read(interstitialAdServiceProvider)
+              .showPostWorkoutAdIfReady();
+          if (!context.mounted) return;
           engine.reset();
           ref.invalidate(activitiesProvider);
           rescheduleReminders(ref);
@@ -453,7 +457,7 @@ class _SummaryView extends StatelessWidget {
 
   final WorkoutPlan plan;
   final int elapsedSec;
-  final VoidCallback onDone;
+  final Future<void> Function() onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -510,7 +514,7 @@ class _SummaryContent extends StatelessWidget {
 
   final WorkoutPlan plan;
   final int elapsedSec;
-  final VoidCallback onDone;
+  final Future<void> Function() onDone;
   final bool showIcon;
 
   @override
@@ -531,7 +535,7 @@ class _SummaryContent extends StatelessWidget {
         _SummaryRow(label: 'Intervals', value: '${plan.intervalCount}'),
         const SizedBox(height: 32),
         FilledButton(
-          onPressed: onDone,
+          onPressed: () => onDone(),
           child: const Text('Done'),
         ),
       ],

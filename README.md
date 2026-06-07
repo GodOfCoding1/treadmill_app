@@ -100,3 +100,23 @@ flutter test
 
 `test/ftms_protocol_test.dart` covers the command encoders, the Treadmill Data parser, and
 the capability/range parsers.
+
+## AdMob (post-workout ads)
+
+Debug builds use Google’s official test ad IDs automatically. For a production release,
+create an AdMob app and interstitial ad unit, then build with your IDs:
+
+```bash
+flutter build appbundle \
+  --dart-define=ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY \
+  --dart-define=ADMOB_INTERSTITIAL_ID=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
+```
+
+Before uploading to Play Console:
+
+1. Update the **Data safety** form to declare the AdMob SDK and advertising.
+2. Link your AdMob app to the Play Store listing for better ad fill.
+3. Never click your own production ads during testing — use debug builds or test IDs.
+
+Interstitials appear only after a plan workout (when tapping **Done** on the summary
+screen) or after stopping a manual run, with a 5-minute frequency cap.

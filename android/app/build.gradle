@@ -51,6 +51,18 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
+
+        // AdMob App ID: test ID by default; override via --dart-define=ADMOB_APP_ID=...
+        def dartDefines = [:]
+        if (project.hasProperty("dart-defines")) {
+            dartDefines = project.property("dart-defines")
+                .split(",")
+                .collectEntries { entry ->
+                    def pair = URLDecoder.decode(entry, "UTF-8").split("=", 2)
+                    [(pair[0]): pair.length > 1 ? pair[1] : ""]
+                }
+        }
+        manifestPlaceholders.admobAppId = dartDefines.ADMOB_APP_ID ?: "ca-app-pub-3940256099942544~3347511713"
     }
 
     signingConfigs {

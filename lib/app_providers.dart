@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'ads/interstitial_ad_service.dart';
 import 'ble/ftms_service.dart';
 import 'ble/scan_controller.dart';
 import 'data/activity_repository.dart';
@@ -121,3 +124,11 @@ class OpenControlIntent extends PendingIntent {
 /// Holds a deferred [PendingIntent] across the connect flow. Cleared once
 /// resolved by the scan screen after a successful connection.
 final pendingIntentProvider = StateProvider<PendingIntent?>((ref) => null);
+
+/// Post-workout interstitial ads. Disposed when the provider scope ends.
+final interstitialAdServiceProvider = Provider<InterstitialAdService>((ref) {
+  final service = InterstitialAdService();
+  ref.onDispose(service.dispose);
+  unawaited(service.preload());
+  return service;
+});

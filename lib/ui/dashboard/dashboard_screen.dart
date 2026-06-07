@@ -165,6 +165,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SnackBar(content: Text('Activity logged.')),
               );
             }
+            await ref
+                .read(interstitialAdServiceProvider)
+                .showPostWorkoutAdIfReady();
           }
         },
         icon: const Icon(Icons.stop),

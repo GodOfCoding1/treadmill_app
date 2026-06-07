@@ -1,10 +1,10 @@
 name: treadmill_app
 description: "Control any FTMS-compliant treadmill over BLE and run custom interval workouts."
-publish_to: 'none'
-version: 1.0.0+1
+publish_to: "none"
+version: 1.0.0+3
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -19,6 +19,7 @@ dependencies:
   timezone: ^0.9.4
   flutter_timezone: ^3.0.1
   flutter_foreground_task: ^9.2.2
+  google_mobile_ads: ^8.0.0
 
 dev_dependencies:
   flutter_test:
