@@ -121,10 +121,12 @@ class WorkoutEngine extends ChangeNotifier {
     if (!_ftms.hasControl) {
       await _ftms.requestControl();
     }
-    // Start the belt first; many treadmills ignore target speed set while stopped.
+    // Start the belt first and wait until it is really moving: pads ignore or
+    // reset target speed set while stopped / during their start countdown.
     await _ftms.start();
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    await _applyInterval(plan.intervals.first);
+    await _ftms.waitUntilMoving();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await _applyInterval(plan.intervals.first, verify: true);
 
     _startTicker();
     return true;
@@ -207,8 +209,13 @@ class WorkoutEngine extends ChangeNotifier {
         '${formatDuration(totalDurationSec)}$target';
   }
 
-  Future<void> _applyInterval(WorkoutInterval interval) async {
-    await _ftms.setSpeed(interval.speedKmh);
+  Future<void> _applyInterval(WorkoutInterval interval,
+      {bool verify = false}) async {
+    if (verify) {
+      await _ftms.setSpeedVerified(interval.speedKmh);
+    } else {
+      await _ftms.setSpeed(interval.speedKmh);
+    }
     final caps = _ftms.capabilities;
     if (caps == null || caps.supportsInclinationTarget) {
       await _ftms.setIncline(interval.inclinePct);
@@ -238,9 +245,11 @@ class WorkoutEngine extends ChangeNotifier {
     if (!_ftms.hasControl) {
       await _ftms.requestControl();
     }
-    final interval = currentInterval;
-    if (interval != null) await _applyInterval(interval);
     await _ftms.start();
+    await _ftms.waitUntilMoving();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    final interval = currentInterval;
+    if (interval != null) await _applyInterval(interval, verify: true);
   }
 
   /// Forces a wall-clock resync. Call when the app returns to the foreground so
@@ -253,10 +262,12 @@ class WorkoutEngine extends ChangeNotifier {
       await _ftms.requestControl();
     }
     final interval = currentInterval;
-    if (interval != null) await _applyInterval(interval);
     if (_phase == WorkoutPhase.running) {
       await _ftms.start();
+      await _ftms.waitUntilMoving();
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
+    if (interval != null) await _applyInterval(interval, verify: true);
   }
 
   Future<void> _finish() async {

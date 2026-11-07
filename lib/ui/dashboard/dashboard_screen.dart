@@ -115,13 +115,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Expanded(
             child: FilledButton.icon(
               onPressed: () async {
-                // Start uses the treadmill's last target speed; apply the
-                // slider values first so it doesn't default to ~1 km/h.
-                await ftms.setSpeed(_targetSpeed);
-                if (supportsIncline) {
-                  await ftms.setIncline(_targetIncline);
-                }
-                await ftms.start();
+                // Start resets the pad to its default (~1 km/h) and ignores
+                // targets during its countdown, so start first and apply the
+                // slider values once the belt is moving.
                 final tracker = ref.read(activityTrackerProvider);
                 if (!tracker.isTracking) {
                   tracker.begin(type: ActivityType.manual);
@@ -131,6 +127,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     text: 'Treadmill running',
                   );
                 }
+                await ftms.startAtSpeed(
+                  _targetSpeed,
+                  inclinePct: supportsIncline ? _targetIncline : null,
+                );
               },
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start'),

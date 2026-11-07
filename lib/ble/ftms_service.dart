@@ -311,7 +311,12 @@ class FtmsService extends ChangeNotifier {
     _pending = completer;
 
     try {
-      await cp.write(bytes, withResponse: true);
+      // Some pads (e.g. SYWP006) expose the Control Point as write-without-
+      // response only; a withResponse write is rejected by the BLE stack before
+      // it ever reaches the treadmill. Pick the write type the device supports.
+      final withResponse =
+          cp.properties.contains(CharacteristicProperty.write);
+      await cp.write(bytes, withResponse: withResponse);
     } catch (e) {
       _pending = null;
       return FtmsCommandResult(opcode, FtmsResultCode.operationFailed);
@@ -356,6 +361,59 @@ class FtmsService extends ChangeNotifier {
       _command(FtmsCommands.setTargetInclination(percent));
 
   Future<FtmsCommandResult> start() => _command(FtmsCommands.startOrResume());
+
+  /// Waits until the belt reports real movement. Some pads run a 3-2-1
+  /// countdown after Start and ignore (or later reset) speed targets sent
+  /// before the belt is actually running. Returns false on timeout, or early
+  /// if the treadmill never reports a speed at all (nothing to wait for).
+  Future<bool> waitUntilMoving(
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    final started = DateTime.now();
+    final deadline = started.add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final v = _data.instantaneousSpeedKmh;
+      if (v != null && v > 0.3) return true;
+      if (v == null &&
+          DateTime.now().difference(started) > const Duration(seconds: 6)) {
+        return false;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    return false;
+  }
+
+  /// Sets the target speed and confirms the belt actually reaches it (it
+  /// ramps, so we poll for a few seconds), re-sending up to [attempts] times.
+  /// Does not retry when the treadmill reports no speed (cannot verify), and
+  /// compares against the target clamped to the device's supported range.
+  Future<FtmsCommandResult> setSpeedVerified(double kmh,
+      {int attempts = 3}) async {
+    final caps = _capabilities;
+    final expected = caps == null ? kmh : kmh.clamp(caps.minSpeed, caps.maxSpeed);
+    late FtmsCommandResult result;
+    for (var i = 0; i < attempts; i++) {
+      result = await setSpeed(kmh);
+      if (!result.isSuccess) return result;
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (DateTime.now().isBefore(deadline)) {
+        final v = _data.instantaneousSpeedKmh;
+        if (v == null) return result;
+        if ((v - expected).abs() <= 0.3) return result;
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+    }
+    return result;
+  }
+
+  /// Starts (or resumes) the belt and then brings it to [kmh] once it is
+  /// really moving, since Start resets the pad to its default speed.
+  Future<void> startAtSpeed(double kmh, {double? inclinePct}) async {
+    await start();
+    await waitUntilMoving();
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await setSpeedVerified(kmh);
+    if (inclinePct != null) await setIncline(inclinePct);
+  }
 
   Future<FtmsCommandResult> pause() => _command(FtmsCommands.pause());
 
